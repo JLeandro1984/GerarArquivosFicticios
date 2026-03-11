@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#225dff" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>Gerador de Arquivos Fictícios</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <main class="container">
+      <header class="hero">
+        <h1>Gerador de Arquivos Fictícios</h1>
+        <p class="subtitle">Crie arquivos de teste no padrão do script BAT, com opção de salvar direto em pasta ou baixar em ZIP.</p>
+        <div class="hero-actions">
+          <button id="installPwaBtn" class="btn-secondary" type="button" hidden>Instalar app</button>
+        </div>
+      </header>
+
+      <section class="layout">
+        <form id="generator-form" class="card" autocomplete="off">
+          <h2>Configurações</h2>
+
+          <div id="formAlert" class="form-alert" hidden></div>
+
+          <div class="grid-2">
+            <label>
+              Total de arquivos
+              <input id="totalFiles" type="number" min="1" value="120" required />
+            </label>
+
+            <label>
+              Prefixo do arquivo
+              <input id="prefix" type="text" value="DummyFile" required />
+            </label>
+          </div>
+
+          <div class="extensions-box">
+            <h3>Extensões dos arquivos</h3>
+            <p class="muted">Marque as extensões que deseja gerar. Você pode adicionar ou remover extensões personalizadas.</p>
+
+            <div id="extensionsList" class="extensions-list"></div>
+
+            <div class="extensions-actions">
+              <input id="newExtensionInput" type="text" placeholder="Nova extensão (ex.: txt)" />
+              <button id="addExtensionBtn" class="btn-secondary" type="button">Adicionar</button>
+            </div>
+          </div>
+
+          <div class="destination-box">
+            <div>
+              <h3>Destino</h3>
+              <p id="folderLabel" class="muted">Nenhuma pasta selecionada. O sistema usará ZIP.</p>
+            </div>
+            <div class="actions-inline">
+              <button id="chooseFolderBtn" class="btn-secondary" type="button">Selecionar pasta</button>
+              <button id="clearCacheBtn" class="btn-secondary danger" type="button">Limpar cache</button>
+            </div>
+          </div>
+
+          <label class="mode-option">
+            <input id="directOnlyMode" type="checkbox" checked />
+            Somente gravação direta na pasta selecionada (sem compactar ZIP)
+          </label>
+
+          <label class="mode-option">
+            <input id="clearDestinationBeforeGenerate" type="checkbox" />
+            Limpar pasta de destino antes de gerar
+          </label>
+
+          <label class="mode-option">
+            <input id="openFolderAfterGenerate" type="checkbox" checked />
+            Abrir pasta após gerar
+          </label>
+
+          <button id="generateBtn" type="submit">Gerar arquivos</button>
+        </form>
+
+        <section class="card status" aria-live="polite">
+          <h2>Status</h2>
+          <p id="statusText">Pronto para gerar.</p>
+          <p id="summaryText" class="muted"></p>
+          <p id="phaseLabel" class="phase-label">Etapa: Aguardando</p>
+          <div class="progress-wrap" aria-label="Progresso da geração">
+            <div id="progressBar" class="progress-bar"></div>
+          </div>
+          <p id="progressLabel" class="muted">0% concluído</p>
+          <button id="openFolderNowBtn" class="btn-secondary" type="button" hidden>Ver arquivos gerados</button>
+          <details id="generatedFilesPanel" class="generated-files" hidden>
+            <summary>Arquivos gerados</summary>
+            <ul id="generatedFilesList"></ul>
+          </details>
+          <ul class="notes">
+            <li>Quando permitido, salva direto na pasta selecionada.</li>
+            <li>Se não houver suporte/permissão, faz fallback para download ZIP.</li>
+            <li>Última pasta escolhida fica em cache para próximas execuções.</li>
+          </ul>
+        </section>
+      </section>
+    </main>
+
+  </body>
+</html>
