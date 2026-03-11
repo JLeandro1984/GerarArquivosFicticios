@@ -199,13 +199,153 @@ function hideOpenFolderButton() {
   openFolderNowBtn.hidden = true;
 }
 
+function getFileExtension(fileName) {
+  const parts = fileName.split(".");
+  if (parts.length < 2) return "";
+  return parts[parts.length - 1].toLowerCase();
+}
+
+function isImageExtension(ext) {
+  return ["jpg", "jpeg", "png", "bmp", "gif", "webp"].includes(ext);
+}
+
+function canvasToBlob(canvas, mimeType, quality) {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), mimeType, quality);
+  });
+}
+
+function createGifPlaceholderBlob() {
+  const base64Gif = "R0lGODlhAQABAIAAAH2QxP///yH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==";
+  const binary = atob(base64Gif);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new Blob([bytes], { type: "image/gif" });
+}
+
+function createBmpBlob(width, height, red, green, blue) {
+  const bytesPerPixel = 3;
+  const rowSize = Math.floor((bytesPerPixel * width + 3) / 4) * 4;
+  const pixelDataSize = rowSize * height;
+  const headerSize = 54;
+  const fileSize = headerSize + pixelDataSize;
+
+  const buffer = new ArrayBuffer(fileSize);
+  const view = new DataView(buffer);
+
+  view.setUint8(0, 0x42);
+  view.setUint8(1, 0x4d);
+  view.setUint32(2, fileSize, true);
+  view.setUint32(10, headerSize, true);
+  view.setUint32(14, 40, true);
+  view.setInt32(18, width, true);
+  view.setInt32(22, height, true);
+  view.setUint16(26, 1, true);
+  view.setUint16(28, 24, true);
+  view.setUint32(34, pixelDataSize, true);
+
+  let offset = headerSize;
+  for (let row = 0; row < height; row += 1) {
+    for (let column = 0; column < width; column += 1) {
+      view.setUint8(offset, blue);
+      view.setUint8(offset + 1, green);
+      view.setUint8(offset + 2, red);
+      offset += 3;
+    }
+
+    while ((offset - headerSize) % rowSize !== 0) {
+      view.setUint8(offset, 0);
+      offset += 1;
+    }
+  }
+
+  return new Blob([buffer], { type: "image/bmp" });
+}
+
+async function createDummyImageContent(extension, fileName) {
+  if (extension === "gif") {
+    return createGifPlaceholderBlob();
+  }
+
+  if (extension === "bmp") {
+    return createBmpBlob(160, 100, 69, 125, 255);
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 160;
+  canvas.height = 100;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return new Blob([`Imagem fictícia ${fileName}`], { type: "text/plain" });
+  }
+
+  context.fillStyle = "#E8F0FF";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#4F7DFF";
+  context.fillRect(10, 10, 140, 80);
+  context.fillStyle = "#FFFFFF";
+  context.font = "bold 14px Segoe UI";
+  context.fillText(extension.toUpperCase(), 18, 34);
+  context.font = "10px Segoe UI";
+  context.fillText(fileName.slice(0, 22), 18, 54);
+
+  const mimeByExtension = {
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    webp: "image/webp",
+  };
+
+  const mimeType = mimeByExtension[extension] ?? "image/png";
+  const blob = await canvasToBlob(canvas, mimeType, 0.92);
+  if (blob) {
+    return blob;
+  }
+
+  return new Blob([`Imagem fictícia ${fileName}`], { type: "text/plain" });
+}
+
+function getBadgeType(ext) {
+  if (isImageExtension(ext)) return "image";
+  if (["doc", "docx", "pdf"].includes(ext)) return "doc";
+  if (["xls", "xlsx", "xlsb", "csv"].includes(ext)) return "sheet";
+  return "data";
+}
+
 function renderGeneratedFiles(fileNames) {
   generatedFilesList.innerHTML = "";
   lastGeneratedFileNames = [...fileNames];
 
   for (const fileName of fileNames) {
     const item = document.createElement("li");
-    item.textContent = fileName;
+    item.className = "generated-file-item";
+
+    const ext = getFileExtension(fileName);
+    const extLabel = (ext || "ARQ").slice(0, 4).toUpperCase();
+    const badge = document.createElement("span");
+    badge.className = `generated-file-badge ${getBadgeType(ext)}`;
+
+    const sheet = document.createElement("span");
+    sheet.className = "generated-file-sheet";
+
+    const tag = document.createElement("span");
+    tag.className = "generated-file-ext-tag";
+    tag.textContent = extLabel;
+
+    badge.appendChild(sheet);
+    badge.appendChild(tag);
+    item.appendChild(badge);
+
+    const name = document.createElement("span");
+    name.className = "generated-file-name";
+    name.textContent = fileName;
+    item.appendChild(name);
+
     generatedFilesList.appendChild(item);
   }
 
@@ -375,7 +515,7 @@ async function writeFilesToDirectory(baseDirectoryHandle, files, onProgress = ()
   }
 }
 
-function buildFiles(totalFiles, prefix, extensions, onProgress = () => {}) {
+async function buildFiles(totalFiles, prefix, extensions, onProgress = () => {}) {
   const now = new Date();
   const today = formatDateForName(now);
   const dataHora = formatDateForContent(now);
@@ -389,7 +529,12 @@ function buildFiles(totalFiles, prefix, extensions, onProgress = () => {}) {
       count += 1;
       const guid = crypto.randomUUID();
       const fileName = `${prefix}_${count}_${today}.${item.ext}`;
-      const content = `Teste arquivo fictício ${guid} - ${dataHora}`;
+      let content = `Teste arquivo fictício ${guid} - ${dataHora}`;
+
+      if (isImageExtension(item.ext)) {
+        content = await createDummyImageContent(item.ext, fileName);
+      }
+
       files.push({ fileName, content });
       onProgress(count, totalFiles);
     }
@@ -630,7 +775,7 @@ form.addEventListener("submit", async (event) => {
     setPhase("Gerando");
     lastOutputDirectoryHandle = null;
 
-    const { files, count, today } = buildFiles(totalFiles, prefix, extensions, (current, total) => {
+    const { files, count, today } = await buildFiles(totalFiles, prefix, extensions, (current, total) => {
       setProgress((current / total) * 40);
     });
     const generatedNames = files.map((file) => file.fileName);
