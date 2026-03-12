@@ -6,6 +6,6 @@
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="108" fill="url(#g)"/>
-  <path d="M134 372V140h98c42 0 75 30 75 70 0 30-17 53-43 65l54 97h-56l-45-86h-49v86H134zm50-128h44c17 0 30-11 30-29s-13-29-30-29h-44v58z" fill="#fff"/>
-  <path d="M357 140h48v232h-48z" fill="#fff"/>
+  <text x="256" y="265" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-size="206" font-weight="700">GA</text>
+  <text x="256" y="350" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-size="35" font-weight="600" letter-spacing="0.8">Gerador de Arquivo</text>
 </svg>

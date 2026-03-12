@@ -6,6 +6,7 @@ const chooseFolderBtn = document.getElementById("chooseFolderBtn");
 const clearCacheBtn = document.getElementById("clearCacheBtn");
 const folderLabel = document.getElementById("folderLabel");
 const installPwaBtn = document.getElementById("installPwaBtn");
+const installInfo = document.getElementById("installInfo");
 const extensionsList = document.getElementById("extensionsList");
 const newExtensionInput = document.getElementById("newExtensionInput");
 const addExtensionBtn = document.getElementById("addExtensionBtn");
@@ -551,8 +552,38 @@ function canUsePwaFeatures() {
   return window.isSecureContext && "serviceWorker" in navigator;
 }
 
+function isAppInstalled() {
+  const standaloneMedia = window.matchMedia("(display-mode: standalone)").matches;
+  const standaloneNavigator = window.navigator.standalone === true;
+  return standaloneMedia || standaloneNavigator;
+}
+
+function setInstallInfo(message = "") {
+  if (!installInfo) return;
+  installInfo.textContent = message;
+  installInfo.hidden = !message;
+}
+
+function refreshInstallUiState() {
+  if (isAppInstalled()) {
+    installPwaBtn.hidden = true;
+    setInstallInfo("App já instalado neste dispositivo. Use 'Abrir no App'.");
+    return;
+  }
+
+  if (deferredInstallPrompt) {
+    installPwaBtn.hidden = false;
+    setInstallInfo("");
+    return;
+  }
+
+  installPwaBtn.hidden = true;
+  setInstallInfo("Instalação indisponível agora. Recarregue a página ou abra no navegador principal.");
+}
+
 async function registerServiceWorker() {
   if (!canUsePwaFeatures()) {
+    setInstallInfo("PWA indisponível neste contexto (é necessário HTTPS ou localhost).");
     return;
   }
 
@@ -566,17 +597,18 @@ async function registerServiceWorker() {
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
   deferredInstallPrompt = event;
-  installPwaBtn.hidden = false;
+  refreshInstallUiState();
 });
 
 window.addEventListener("appinstalled", () => {
   deferredInstallPrompt = null;
-  installPwaBtn.hidden = true;
+  refreshInstallUiState();
   statusText.textContent = "Aplicativo instalado com sucesso.";
 });
 
 installPwaBtn.addEventListener("click", async () => {
   if (!deferredInstallPrompt) {
+    refreshInstallUiState();
     statusText.textContent = "Instalação PWA não disponível neste navegador/contexto.";
     return;
   }
@@ -591,7 +623,7 @@ installPwaBtn.addEventListener("click", async () => {
   }
 
   deferredInstallPrompt = null;
-  installPwaBtn.hidden = true;
+  refreshInstallUiState();
 });
 
 addExtensionBtn.addEventListener("click", () => {
@@ -870,3 +902,4 @@ form.addEventListener("submit", async (event) => {
 loadCachedSettings();
 restoreCachedDirectory();
 registerServiceWorker();
+refreshInstallUiState();
